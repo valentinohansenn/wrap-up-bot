@@ -1,38 +1,108 @@
-import { AutocompleteInteraction } from "discord.js";
-import { MembersOptions } from "../types/member";
+import { AutocompleteInteraction } from "discord.js"
+import { MembersOptions } from "../types/member"
 
 export class AutocompleteActions {
-   private static readonly STATIC_CHOICES: MembersOptions[] = [
-      { name: "Whoever's in the call, get out!", value: "all" },
-      { name: "Me, myself and I, bye!", value: "self" },
-      { name: "Those AFK son of a bit-", value: "afk" },
-   ];
+	private static getStaticChoices(interaction: AutocompleteInteraction) {
+		const choices: MembersOptions[] = []
 
-   private static getVoiceMembers(interaction: AutocompleteInteraction) {
-      const voiceMembers: MembersOptions[] = [];
+		const member = interaction.member
+		const voiceChannels = interaction.guild?.channels.cache.filter(
+			(channel) => channel.isVoiceBased()
+		)
 
-      const voiceChannels = interaction.guild?.channels.cache.filter(
-         (channel) => channel.isVoiceBased()
-      );
+		// Check if there exists any members in the voice channels
+		const hasVoiceMembers = voiceChannels?.some(
+			(channel) => channel.members.size > 0
+		)
 
-      voiceChannels?.forEach((channel) => {
-         channel.members?.forEach((member) => {
-            voiceMembers.push({ name: member.displayName, value: member.id });
-         });
-      });
+      if (!hasVoiceMembers) {
+         return choices
+      }
 
-      return voiceMembers
-   }
+		// Get all the members in the voice channels
+		const everyone =
+			voiceChannels
+				?.map((channel) => Array.from(channel.members.keys()))
+				.flat() ?? []
 
-   private static filterChoices(choices: MembersOptions[], focusedValue: string) {
-      return choices.filter((choice) => choice.name.toLowerCase().includes(focusedValue)).slice(0, 25);
-   }
+		const afk =
+			voiceChannels
+				?.map((channel) =>
+					Array.from(
+						channel.members
+							.filter(
+								(member) =>
+									member.voice.selfDeaf || member.voice.selfMute
+							)
+							.keys()
+					)
+				)
+				.flat() ?? []
 
-   static async handleVoiceMembersAutocomplete(interaction: AutocompleteInteraction) {
-      const focusedValue = interaction.options.getFocused();
-      const voiceMembers = this.getVoiceMembers(interaction);
-      const allChoices = [...this.STATIC_CHOICES, ...voiceMembers];
-      const filtered = this.filterChoices(allChoices, focusedValue);
-      await interaction.respond(filtered);
-   }
+		// Check if there exists any members in the voice channels
+		if (everyone?.length > 0) {
+         console.log("everyone", everyone)
+			choices.push({
+				name: "Everyone! Literally, all of em'",
+				value: everyone.join(","),
+			})
+		}
+
+		// Check if the command user is in a voice channel
+		if (member && "voice" in member && member.voice.channel) {
+			choices.push({ name: "Me, myself and I", value: member.id })
+		}
+
+		// Check if there exists AFK users in a voice channel
+		if (afk?.length > 0) {
+			choices.push({
+				name: "AFK bit- I mean, members",
+				value: afk.join(","),
+			})
+		}
+
+		return choices
+	}
+
+	private static getVoiceMembers(interaction: AutocompleteInteraction) {
+		const voiceMembers: MembersOptions[] = []
+
+		const voiceChannels = interaction.guild?.channels.cache.filter(
+			(channel) => channel.isVoiceBased()
+		)
+
+		voiceChannels?.forEach((channel) => {
+			channel.members?.forEach((member) => {
+				if (member.user.bot) return
+				if (member.user.system) return
+				if (member.id === interaction.user.id) return
+
+				voiceMembers.push({ name: member.displayName, value: member.id })
+			})
+		})
+
+		return voiceMembers
+	}
+
+	private static filterChoices(
+		choices: MembersOptions[],
+		focusedValue: string
+	) {
+		return choices
+			.filter((choice) => choice.name.toLowerCase().includes(focusedValue))
+			.slice(0, 25)
+	}
+
+	static async handleVoiceMembersAutocomplete(
+		interaction: AutocompleteInteraction
+	) {
+		const focusedValue = interaction.options.getFocused()
+		const voiceMembers = this.getVoiceMembers(interaction)
+		const allChoices = [
+			...this.getStaticChoices(interaction),
+			...voiceMembers,
+		]
+		const filtered = this.filterChoices(allChoices, focusedValue)
+		await interaction.respond(filtered)
+	}
 }
