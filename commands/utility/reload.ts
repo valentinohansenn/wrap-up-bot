@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, Collection } from "di
 
 declare module "discord.js" {
 	export interface Client {
-		commands: Collection<string, any>
+		commands: Collection<any, any>
 	}
 }
 
@@ -29,10 +29,10 @@ module.exports = {
 			)
 		}
 
-		delete require.cache[require.resolve(`./${command.data.name}.js`)]
+		delete require.cache[require.resolve(`./commands/utility/${command.data.name}.ts`)]
 
 		try {
-			const newCommand = require(`./${command.data.name}.js`)
+			const newCommand = require(`./${command.data.name}.ts`)
 			interaction.client.commands.set(newCommand.data.name, newCommand)
 			await interaction.reply(
 				`Command \`${newCommand.data.name}\` was reloaded!`
@@ -40,7 +40,7 @@ module.exports = {
 		} catch (error) {
 			console.error(error)
 			await interaction.reply(
-				`There was an error while reloading a command \`${command.data.name}\`:\n\`${error.message}\``
+				`There was an error while reloading a command \`${command.data.name}\`:\n\`${(error as Error).message}\``
 			)
 		}
 	},

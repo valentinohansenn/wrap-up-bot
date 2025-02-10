@@ -2,7 +2,7 @@ import { REST, Routes } from "discord.js"
 import fs from "node:fs"
 import path from "node:path"
 import dotenv from "dotenv"
-import { CommandsOptions } from "./interfaces/utils"
+import { CommandsOptions } from "./types/command"
 
 dotenv.config()
 
@@ -35,7 +35,7 @@ for (const folder of commandFolders) {
 	const commandsPath = path.join(foldersPath, folder)
 	const commandFiles = fs
 		.readdirSync(commandsPath)
-		.filter((file) => file.endsWith(".js"))
+		.filter((file) => file.endsWith(".ts"))
 	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 	for (const file of commandFiles) {
 		const filePath = path.join(commandsPath, file)

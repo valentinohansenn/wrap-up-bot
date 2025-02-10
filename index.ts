@@ -6,8 +6,8 @@ import dotenv from "dotenv"
 // Define custom client type with additional properties
 declare module "discord.js" {
 	export interface Client {
-		commands: Collection<string, any>;
-		cooldowns: Collection<string, any>;
+		commands: Collection<any, any>
+		cooldowns: Collection<any, any>
 	}
 }
 
@@ -56,7 +56,7 @@ for (const folder of commandFolders) {
 const eventsPath = path.join(__dirname, "events")
 const eventFiles = fs
 	.readdirSync(eventsPath)
-	.filter((file) => file.endsWith(".js"))
+	.filter((file) => file.endsWith(".ts"))
 
 for (const file of eventFiles) {
 	const filePath = path.join(eventsPath, file)

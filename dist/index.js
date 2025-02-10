@@ -3,6 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_fs_1 = __importDefault(require("node:fs"));
+const node_path_1 = __importDefault(require("node:path"));
 const discord_js_1 = require("discord.js");
 const dotenv_1 = __importDefault(require("dotenv"));
 // Load environment variables from .env file
@@ -19,32 +21,40 @@ const client = new discord_js_1.Client({
         discord_js_1.GatewayIntentBits.MessageContent,
     ],
 });
-// Bot logs when it's ready
-client.once("ready", () => {
-    console.log(`${client.user?.username} is online!`);
-});
-// Listen for messages and log the sender's name
-client.on("messageCreate", (message) => {
-    if (message.author.bot) {
-        // If the message is from a bot, stop further execution
-        return;
+client.commands = new discord_js_1.Collection();
+client.cooldowns = new discord_js_1.Collection();
+const foldersPath = node_path_1.default.join(__dirname, "commands");
+const commandFolders = node_fs_1.default.readdirSync(foldersPath);
+for (const folder of commandFolders) {
+    const commandsPath = node_path_1.default.join(foldersPath, folder);
+    const commandFiles = node_fs_1.default
+        .readdirSync(commandsPath)
+        .filter((file) => file.endsWith(".ts"));
+    for (const file of commandFiles) {
+        const filePath = node_path_1.default.join(commandsPath, file);
+        const command = require(filePath);
+        // Set a new item in the Collection with the key as the command name and the value as the exported module
+        if ("data" in command && "execute" in command) {
+            client.commands.set(command.data.name, command);
+        }
+        else {
+            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+        }
     }
-    if (!message.member) {
-        // If the message is a DM, stop further execution
-        return;
+}
+const eventsPath = node_path_1.default.join(__dirname, "events");
+const eventFiles = node_fs_1.default
+    .readdirSync(eventsPath)
+    .filter((file) => file.endsWith(".ts"));
+for (const file of eventFiles) {
+    const filePath = node_path_1.default.join(eventsPath, file);
+    const event = require(filePath);
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
     }
-    console.log(`${message.member.displayName} sent: ${message.content}`);
-});
-client.on("interactionCreate", (interaction) => {
-    if (!interaction.isChatInputCommand()) {
-        return;
+    else {
+        client.on(event.name, (...args) => event.execute(...args));
     }
-    const { commandName } = interaction;
-    console.log({ commandName });
-    if (commandName === "hey") {
-        console.log("here");
-        interaction.reply("What's up, girl? Whatchu lookin' at?");
-    }
-});
+}
 // Login to Discord with your app's token
 client.login(process.env.DISCORD_TOKEN);
