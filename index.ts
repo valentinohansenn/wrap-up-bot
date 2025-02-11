@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
-import { Client, Collection, GatewayIntentBits } from "discord.js"
 import dotenv from "dotenv"
+import { Client, Collection, GatewayIntentBits } from "discord.js"
 
 // Define custom client type with additional properties
 declare module "discord.js" {
@@ -31,6 +31,7 @@ const client = new Client({
 client.commands = new Collection()
 client.cooldowns = new Collection()
 
+// Set all commands from the command files to the client
 const foldersPath = path.join(__dirname, "commands")
 const commandFolders = fs.readdirSync(foldersPath)
 
@@ -53,6 +54,7 @@ for (const folder of commandFolders) {
 	}
 }
 
+// Get all event files and set them to the client based on their type
 const eventsPath = path.join(__dirname, "events")
 const eventFiles = fs
 	.readdirSync(eventsPath)

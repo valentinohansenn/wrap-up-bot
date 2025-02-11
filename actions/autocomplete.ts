@@ -1,5 +1,6 @@
 import { AutocompleteInteraction } from "discord.js"
 import { MembersOptions } from "../types/member"
+import { VoiceStateManager } from "../utils/voice-state-manager"
 
 export class AutocompleteActions {
 	private static getStaticChoices(interaction: AutocompleteInteraction) {
@@ -15,9 +16,9 @@ export class AutocompleteActions {
 			(channel) => channel.members.size > 0
 		)
 
-      if (!hasVoiceMembers) {
-         return choices
-      }
+		if (!hasVoiceMembers) {
+			return choices
+		}
 
 		// Get all the members in the voice channels
 		const everyone =
@@ -41,7 +42,6 @@ export class AutocompleteActions {
 
 		// Check if there exists any members in the voice channels
 		if (everyone?.length > 0) {
-         console.log("everyone", everyone)
 			choices.push({
 				name: "Everyone! Literally, all of em'",
 				value: everyone.join(","),
@@ -66,20 +66,28 @@ export class AutocompleteActions {
 
 	private static getVoiceMembers(interaction: AutocompleteInteraction) {
 		const voiceMembers: MembersOptions[] = []
+		const voiceStateManager = VoiceStateManager.getInstance()
 
-		const voiceChannels = interaction.guild?.channels.cache.filter(
-			(channel) => channel.isVoiceBased()
-		)
+		const commandUserVoiceChannel =
+			interaction.member && "voice" in interaction.member
+				? interaction.member.voice.channel
+				: null
 
-		voiceChannels?.forEach((channel) => {
-			channel.members?.forEach((member) => {
+		if (commandUserVoiceChannel) {
+			console.log("command user voice", commandUserVoiceChannel)
+			const channelMembers = voiceStateManager.getVoiceMembers(
+				commandUserVoiceChannel.id
+			)
+
+			channelMembers.forEach(async (memberId) => {
+				const member = await interaction.guild?.members.fetch(memberId)
+				if (!member) return
 				if (member.user.bot) return
-				if (member.user.system) return
-				if (member.id === interaction.user.id) return
+				if (memberId === interaction.user.id) return
 
 				voiceMembers.push({ name: member.displayName, value: member.id })
 			})
-		})
+		}
 
 		return voiceMembers
 	}

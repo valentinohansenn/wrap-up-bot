@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
-const discord_js_1 = require("discord.js");
 const dotenv_1 = __importDefault(require("dotenv"));
+const discord_js_1 = require("discord.js");
 // Load environment variables from .env file
 dotenv_1.default.config();
 if (!process.env.DISCORD_TOKEN) {
@@ -23,6 +23,7 @@ const client = new discord_js_1.Client({
 });
 client.commands = new discord_js_1.Collection();
 client.cooldowns = new discord_js_1.Collection();
+// Set all commands from the command files to the client
 const foldersPath = node_path_1.default.join(__dirname, "commands");
 const commandFolders = node_fs_1.default.readdirSync(foldersPath);
 for (const folder of commandFolders) {
@@ -42,6 +43,7 @@ for (const folder of commandFolders) {
         }
     }
 }
+// Get all event files and set them to the client based on their type
 const eventsPath = node_path_1.default.join(__dirname, "events");
 const eventFiles = node_fs_1.default
     .readdirSync(eventsPath)

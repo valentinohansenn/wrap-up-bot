@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AutocompleteActions = void 0;
+const voice_state_manager_1 = require("../utils/voice-state-manager");
 class AutocompleteActions {
     static getStaticChoices(interaction) {
         const choices = [];
@@ -22,7 +23,6 @@ class AutocompleteActions {
             .flat() ?? [];
         // Check if there exists any members in the voice channels
         if (everyone?.length > 0) {
-            console.log("everyone", everyone);
             choices.push({
                 name: "Everyone! Literally, all of em'",
                 value: everyone.join(","),
@@ -43,18 +43,21 @@ class AutocompleteActions {
     }
     static getVoiceMembers(interaction) {
         const voiceMembers = [];
-        const voiceChannels = interaction.guild?.channels.cache.filter((channel) => channel.isVoiceBased());
-        voiceChannels?.forEach((channel) => {
-            channel.members?.forEach((member) => {
+        const voiceStateManager = voice_state_manager_1.VoiceStateManager.getInstance();
+        const commandUserVoiceChannel = interaction.member && ('voice' in interaction.member) ? interaction.member.voice.channel : null;
+        if (commandUserVoiceChannel) {
+            const channelMembers = voiceStateManager.getVoiceMembers(commandUserVoiceChannel.id);
+            channelMembers.forEach(async (memberId) => {
+                const member = await interaction.guild?.members.fetch(memberId);
+                if (!member)
+                    return;
                 if (member.user.bot)
                     return;
-                if (member.user.system)
-                    return;
-                if (member.id === interaction.user.id)
+                if (memberId === interaction.user.id)
                     return;
                 voiceMembers.push({ name: member.displayName, value: member.id });
             });
-        });
+        }
         return voiceMembers;
     }
     static filterChoices(choices, focusedValue) {

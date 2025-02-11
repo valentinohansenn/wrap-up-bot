@@ -26,9 +26,7 @@ module.exports = {
     async execute(interaction) {
         const targetId = interaction.options.getString("target", true);
         const delay = interaction.options.getString("delay") || "0";
-        console.log("delay", delay);
         const delayMinutes = parseInt(delay);
-        console.log("delay minutes", delayMinutes);
         const executeDisconnect = async () => {
             // Disconnect the member(s) based on the autocomplete
             if (targetId.includes(",")) {
@@ -82,7 +80,6 @@ module.exports = {
             setTimeout(async () => {
                 try {
                     const result = await executeDisconnect();
-                    // Send message to the channel instead of using followUp
                     if (channel) {
                         if (typeof result === "number") {
                             await channel.send(`Successfully disconnected ${result} members from the voice channel (scheduled ${formatTimeMessage(delayMinutes)})!`);
