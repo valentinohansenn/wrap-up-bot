@@ -6,7 +6,7 @@ import {
 	SlashCommandBuilder,
 } from "discord.js"
 import { AutocompleteActions } from "../../actions/autocomplete"
-import { DELAY } from "../../constants/delay"
+import { TIMER } from "../../constants/timer"
 
 module.exports = {
 	name: "disconnect",
@@ -22,10 +22,10 @@ module.exports = {
 		)
 		.addStringOption((option) =>
 			option
-				.setName("delay")
+				.setName("timer")
 				.setDescription("Disconnect after specified time")
 				.setRequired(true)
-				.addChoices(DELAY)
+				.addChoices(TIMER)
 		)
 		.setDefaultMemberPermissions(PermissionFlagsBits.MoveMembers)
 		.setContexts(InteractionContextType.Guild),
@@ -34,9 +34,9 @@ module.exports = {
 	},
 	async execute(interaction: ChatInputCommandInteraction) {
 		const targetId = interaction.options.getString("target", true)
-		const delay = interaction.options.getString("delay") || "0"
+		const timer = interaction.options.getString("timer") || "0"
 
-		const delayMinutes = parseInt(delay)
+		const timerMinutes = parseInt(timer)
 
 		const executeDisconnect = async () => {
 			// Disconnect the member(s) based on the autocomplete
@@ -76,22 +76,22 @@ module.exports = {
 			return `in ${minutes / 60} hours`
 		}
 
-		if (delayMinutes > 0) {
+		if (timerMinutes > 0) {
 			// Get the channel for follow-up messages
 			const channel = interaction.channel
 			if (!channel || !("send" in channel)) return
 
 			// Schedule the disconnect
-			const delayMs = delayMinutes * 60 * 1000
+			const timerMs = timerMinutes * 60 * 1000
 			const targetMember = await interaction.guild?.members.fetch(targetId)
 			const scheduledTime = new Date(
-				Date.now() + delayMs
+				Date.now() + timerMs
 			).toLocaleTimeString()
 
 			await interaction.reply(
 				`Scheduled to disconnect ${
 					targetId.includes(",") ? "members" : targetMember?.displayName
-				} ${formatTimeMessage(delayMinutes)} (at ${scheduledTime}).`
+				} ${formatTimeMessage(timerMinutes)} (at ${scheduledTime}).`
 			)
 
 			setTimeout(async () => {
@@ -102,7 +102,7 @@ module.exports = {
 						if (typeof result === "number") {
 							await channel.send(
 								`Successfully disconnected ${result} members from the voice channel (scheduled ${formatTimeMessage(
-									delayMinutes
+									timerMinutes
 								)})!`
 							)
 						} else if (result) {
@@ -110,7 +110,7 @@ module.exports = {
 								`Successfully disconnected ${
 									result.displayName
 								} from the voice channel (was scheduled ${formatTimeMessage(
-									delayMinutes
+									timerMinutes
 								)})!`
 							)
 						} else {
@@ -127,7 +127,7 @@ module.exports = {
 						)
 					}
 				}
-			}, delayMs)
+			}, timerMs)
 		} else {
 			// Immediate disconnect
 			const result = await executeDisconnect()

@@ -1,6 +1,6 @@
-export const DELAY = [
+export const TIMER = [
 	{ name: "Right now", value: "0" },
-   { name: "In 1 minute", value: "1" },
+	{ name: "In 1 minute", value: "1" },
 	{ name: "In 5 minutes", value: "5" },
 	{ name: "In 10 minutes", value: "10" },
 	{ name: "In 15 minutes", value: "15" },
