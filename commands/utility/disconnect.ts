@@ -12,7 +12,7 @@ module.exports = {
 	name: "disconnect",
 	data: new SlashCommandBuilder()
 		.setName("disconnect")
-		.setDescription("Disconnect user(s) from the goddamn voice channel! 🤬")
+		.setDescription("Disconnect user(s) from the goddamn voice channel!")
 		.addStringOption((option) =>
 			option
 				.setName("target")
@@ -23,7 +23,7 @@ module.exports = {
 		.addStringOption((option) =>
 			option
 				.setName("timer")
-				.setDescription("Disconnect after specified time")
+				.setDescription("Disconnect after specified time.")
 				.setRequired(true)
 				.addChoices(TIMER)
 		)
@@ -79,55 +79,58 @@ module.exports = {
 		if (timerMinutes > 0) {
 			// Get the channel for follow-up messages
 			const channel = interaction.channel
-			if (!channel || !("send" in channel)) return
+         const timerMs = timerMinutes * 60 * 1000
+			if (!channel || !("send" in channel)) {
+				await interaction.reply({
+					content: "This command can only be used in a text channel.",
+					ephemeral: true,
+				})
+				return
+			}
 
-			// Schedule the disconnect
-			const timerMs = timerMinutes * 60 * 1000
-			const targetMember = await interaction.guild?.members.fetch(targetId)
-			const scheduledTime = new Date(
-				Date.now() + timerMs
-			).toLocaleTimeString()
-
+			// First, acknowledge the command immediately
 			await interaction.reply(
 				`Scheduled to disconnect ${
-					targetId.includes(",") ? "members" : targetMember?.displayName
-				} ${formatTimeMessage(timerMinutes)} (at ${scheduledTime}).`
+					targetId.includes(",")
+						? "members"
+						: (
+								await interaction.guild?.members.fetch(targetId)
+						  )?.displayName
+				} ${formatTimeMessage(timerMinutes)} (at ${new Date(
+					Date.now() + timerMinutes * 60 * 1000
+				).toLocaleTimeString()}).`
 			)
 
-			setTimeout(async () => {
+			// Store the timeout reference
+			// timeoutId can be used somewhere if you want to cancel the timer
+			const timeoutId = setTimeout(async () => {
 				try {
 					const result = await executeDisconnect()
 
-					if (channel) {
+					if (result) {
 						if (typeof result === "number") {
 							await channel.send(
-								`Successfully disconnected ${result} members from the voice channel (scheduled ${formatTimeMessage(
-									timerMinutes
-								)})!`
-							)
-						} else if (result) {
-							await channel.send(
-								`Successfully disconnected ${
-									result.displayName
-								} from the voice channel (was scheduled ${formatTimeMessage(
-									timerMinutes
-								)})!`
+								`Successfully disconnected ${result} members from the voice channel!`
 							)
 						} else {
 							await channel.send(
-								"Target member(s) were not in a voice channel when the timer expired."
+								`Successfully disconnected ${result.displayName} from the voice channel!`
 							)
 						}
-					}
-				} catch (error) {
-					console.error(error)
-					if (channel) {
+					} else {
 						await channel.send(
-							"There was an error executing the scheduled disconnect."
+							"Target member(s) were not in a voice channel when the timer expired."
 						)
 					}
+				} catch (error) {
+					console.error("Error in scheduled disconnect:", error)
+					await channel.send(
+						"There was an error executing the scheduled disconnect."
+					)
 				}
 			}, timerMs)
+
+         console.log(timeoutId)
 		} else {
 			// Immediate disconnect
 			const result = await executeDisconnect()

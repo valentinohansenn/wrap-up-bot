@@ -17,3 +17,4 @@ module.exports = {
         console.log(`${message.member.displayName} sent: ${message.content}`);
     },
 };
+//# sourceMappingURL=message-create.js.map

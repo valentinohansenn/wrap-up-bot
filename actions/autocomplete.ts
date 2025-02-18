@@ -3,6 +3,8 @@ import { MembersOptions } from "../types/member"
 import { VoiceStateManager } from "../utils/voice-state-manager"
 
 export class AutocompleteActions {
+	private static voiceStateManager = VoiceStateManager.getInstance()
+
 	private static getStaticChoices(interaction: AutocompleteInteraction) {
 		const choices: MembersOptions[] = []
 
@@ -66,7 +68,8 @@ export class AutocompleteActions {
 
 	private static getVoiceMembers(interaction: AutocompleteInteraction) {
 		const voiceMembers: MembersOptions[] = []
-		const voiceStateManager = VoiceStateManager.getInstance()
+
+		if (!interaction.guildId) return voiceMembers
 
 		const commandUserVoiceChannel =
 			interaction.member && "voice" in interaction.member
@@ -74,43 +77,36 @@ export class AutocompleteActions {
 				: null
 
 		if (commandUserVoiceChannel) {
-			console.log("command user voice", commandUserVoiceChannel)
-			const channelMembers = voiceStateManager.getVoiceMembers(
+			const memberIds = this.voiceStateManager.getVoiceMembers(
+				interaction.guildId,
 				commandUserVoiceChannel.id
 			)
 
-			channelMembers.forEach(async (memberId) => {
-				const member = await interaction.guild?.members.fetch(memberId)
-				if (!member) return
-				if (member.user.bot) return
-				if (memberId === interaction.user.id) return
-
+			for (const memberId of memberIds) {
+				const member = interaction.guild?.members.cache.get(memberId)
+				if (!member || member.user.bot) continue
 				voiceMembers.push({ name: member.displayName, value: member.id })
-			})
+			}
 		}
 
 		return voiceMembers
 	}
 
-	private static filterChoices(
-		choices: MembersOptions[],
-		focusedValue: string
-	) {
-		return choices
-			.filter((choice) => choice.name.toLowerCase().includes(focusedValue))
-			.slice(0, 25)
-	}
-
 	static async handleVoiceMembersAutocomplete(
 		interaction: AutocompleteInteraction
 	) {
-		const focusedValue = interaction.options.getFocused()
-		const voiceMembers = this.getVoiceMembers(interaction)
-		const allChoices = [
-			...this.getStaticChoices(interaction),
-			...voiceMembers,
-		]
-		const filtered = this.filterChoices(allChoices, focusedValue)
+		const focusedValue = interaction.options.getFocused().toLowerCase()
+
+		// Get fresh voice member data
+		const voiceMembers = await this.getVoiceMembers(interaction)
+		const staticChoices = this.getStaticChoices(interaction)
+
+		const allChoices = [...staticChoices, ...voiceMembers]
+
+		const filtered = allChoices
+			.filter((choice) => choice.name.toLowerCase().includes(focusedValue))
+			.slice(0, 25)
+
 		await interaction.respond(filtered)
 	}
 }

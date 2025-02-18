@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AutocompleteActions = void 0;
 const voice_state_manager_1 = require("../utils/voice-state-manager");
 class AutocompleteActions {
+    static voiceStateManager = voice_state_manager_1.VoiceStateManager.getInstance();
     static getStaticChoices(interaction) {
         const choices = [];
         const member = interaction.member;
@@ -43,37 +44,33 @@ class AutocompleteActions {
     }
     static getVoiceMembers(interaction) {
         const voiceMembers = [];
-        const voiceStateManager = voice_state_manager_1.VoiceStateManager.getInstance();
-        const commandUserVoiceChannel = interaction.member && ('voice' in interaction.member) ? interaction.member.voice.channel : null;
+        if (!interaction.guildId)
+            return voiceMembers;
+        const commandUserVoiceChannel = interaction.member && "voice" in interaction.member
+            ? interaction.member.voice.channel
+            : null;
         if (commandUserVoiceChannel) {
-            const channelMembers = voiceStateManager.getVoiceMembers(commandUserVoiceChannel.id);
-            channelMembers.forEach(async (memberId) => {
-                const member = await interaction.guild?.members.fetch(memberId);
-                if (!member)
-                    return;
-                if (member.user.bot)
-                    return;
-                if (memberId === interaction.user.id)
-                    return;
+            const memberIds = this.voiceStateManager.getVoiceMembers(interaction.guildId, commandUserVoiceChannel.id);
+            for (const memberId of memberIds) {
+                const member = interaction.guild?.members.cache.get(memberId);
+                if (!member || member.user.bot)
+                    continue;
                 voiceMembers.push({ name: member.displayName, value: member.id });
-            });
+            }
         }
         return voiceMembers;
     }
-    static filterChoices(choices, focusedValue) {
-        return choices
+    static async handleVoiceMembersAutocomplete(interaction) {
+        const focusedValue = interaction.options.getFocused().toLowerCase();
+        // Get fresh voice member data
+        const voiceMembers = await this.getVoiceMembers(interaction);
+        const staticChoices = this.getStaticChoices(interaction);
+        const allChoices = [...staticChoices, ...voiceMembers];
+        const filtered = allChoices
             .filter((choice) => choice.name.toLowerCase().includes(focusedValue))
             .slice(0, 25);
-    }
-    static async handleVoiceMembersAutocomplete(interaction) {
-        const focusedValue = interaction.options.getFocused();
-        const voiceMembers = this.getVoiceMembers(interaction);
-        const allChoices = [
-            ...this.getStaticChoices(interaction),
-            ...voiceMembers,
-        ];
-        const filtered = this.filterChoices(allChoices, focusedValue);
         await interaction.respond(filtered);
     }
 }
 exports.AutocompleteActions = AutocompleteActions;
+//# sourceMappingURL=autocomplete.js.map

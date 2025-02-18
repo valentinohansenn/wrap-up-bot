@@ -9,3 +9,4 @@ module.exports = {
         await interaction.reply("What's up, girl? Whatchu lookin' at?");
     },
 };
+//# sourceMappingURL=hey.js.map
